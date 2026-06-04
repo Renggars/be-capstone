@@ -1,0 +1,172 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// USER
+// ============================================================
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  age       Int
+  gender    Gender
+  avatar    String?  @db.Text
+  role      Role     @default(USER)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tokens       Token[]
+  checkins     Checkin[]
+  userBadges   UserBadge[]
+  groupMembers GroupMember[]
+
+  @@map("users")
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+// ============================================================
+// TOKEN (untuk refresh token & blacklist)
+// ============================================================
+
+model Token {
+  id          Int       @id @default(autoincrement())
+  token       String    @db.Text
+  userId      Int
+  type        TokenType
+  expires     DateTime
+  blacklisted Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("tokens")
+}
+
+enum TokenType {
+  ACCESS
+  REFRESH
+}
+
+// ============================================================
+// CHECKIN (Daily Check-in harian)
+// ============================================================
+
+model Checkin {
+  id              Int      @id @default(autoincrement())
+  userId          Int
+  skorKebahagiaan Int // 1-10
+  waktuTidur      Float // dalam jam
+  screenTime      Float // dalam jam
+  tingkatOlahraga String // 'Tidak Ada' | 'Kadang-kadang' | 'Rutin'
+  interaksiSosial Int // 1-10
+  waktuKerja      Float // dalam jam
+  checkinDate     DateTime @db.Date
+  createdAt       DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, checkinDate])
+  @@map("checkins")
+}
+
+// ============================================================
+// BADGES (Sistem Lencana)
+// ============================================================
+
+model Badge {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String
+  iconUrl     String?
+  criteria    String   @db.Text // deskripsi kriteria unlock
+  createdAt   DateTime @default(now())
+
+  userBadges UserBadge[]
+
+  @@map("badges")
+}
+
+model UserBadge {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  badgeId    Int
+  unlockedAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeId])
+  @@map("user_badges")
+}
+
+// ============================================================
+// GROUPS / CIRCLE (Fitur komunitas)
+// ============================================================
+
+model Group {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String   @db.Text
+  category    String
+  isPublic    Boolean  @default(true)
+  inviteCode  String?  @unique
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members GroupMember[]
+  rules   GroupRule[]
+
+  @@map("groups")
+}
+
+model GroupRule {
+  id        Int      @id @default(autoincrement())
+  groupId   Int
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@map("group_rules")
+}
+
+model GroupMember {
+  id       Int       @id @default(autoincrement())
+  userId   Int
+  groupId  Int
+  role     GroupRole @default(MEMBER)
+  joinedAt DateTime  @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, groupId])
+  @@map("group_members")
+}
+
+enum GroupRole {
+  ADMIN
+  MEMBER
+}

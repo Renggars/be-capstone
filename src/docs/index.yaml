@@ -1,0 +1,1228 @@
+openapi: 3.0.0
+
+info:
+  title: MindBalance API
+  description: |
+    REST API untuk aplikasi kesehatan mental **MindBalance**.
+
+    ## Auth Flow
+    1. **Register** → `POST /auth/register`
+    2. **Login** → `POST /auth/login` → dapatkan `accessToken` & `refreshToken`
+    3. **Authorize** → Klik tombol **Authorize** di kanan atas, isi `Bearer <accessToken>`
+    4. Semua endpoint (kecuali auth) akan otomatis menggunakan token tersebut.
+
+    ## Seed Accounts (untuk testing)
+    | Email | Password | Role |
+    |---|---|---|
+    | admin@capstone.com | admin123 | ADMIN |
+    | user@capstone.com | user1234 | USER |
+
+    ## Invite Code Grup Privat
+    | Grup | Kode |
+    |---|---|
+    | Inner Circle Healing | `HEAL-2025` |
+  version: 1.0.0
+  contact:
+    name: MindBalance Team
+
+servers:
+  - url: http://localhost:4000
+    description: Local Development Server
+
+tags:
+  - name: Auth
+    description: Register, Login, Logout, Refresh Token
+  - name: User Profile
+    description: Lihat & update profil user yang sedang login
+  - name: Daily Check-in
+    description: Isi parameter kesehatan harian & histori heatmap
+  - name: Dashboard & Insights
+    description: Ringkasan stres, saran AI, dan sistem lencana
+  - name: Group / Circle
+    description: Eksplorasi & bergabung ke komunitas kesehatan mental
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "Format: Bearer <your_access_token>"
+
+  schemas:
+    # ─── Common ────────────────────────────────────────────────
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Success"
+        data:
+          type: object
+
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 400
+        message:
+          type: string
+          example: "Bad Request"
+
+    # ─── User ──────────────────────────────────────────────────
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "Budi Santoso"
+        email:
+          type: string
+          format: email
+          example: "budi@example.com"
+        avatar:
+          type: string
+          nullable: true
+          example: "https://example.com/avatar.jpg"
+        role:
+          type: string
+          enum: [USER, ADMIN]
+          example: "USER"
+        age:
+          type: integer
+          example: 25
+        gender:
+          type: string
+          enum: [MALE, FEMALE]
+          example: "MALE"
+        isActive:
+          type: boolean
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    # ─── Token ─────────────────────────────────────────────────
+    Token:
+      type: object
+      properties:
+        token:
+          type: string
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        expires:
+          type: string
+          format: date-time
+
+    AuthTokens:
+      type: object
+      properties:
+        access:
+          $ref: "#/components/schemas/Token"
+        refresh:
+          $ref: "#/components/schemas/Token"
+
+    # ─── Checkin ───────────────────────────────────────────────
+    Checkin:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        userId:
+          type: integer
+          example: 1
+        skorKebahagiaan:
+          type: integer
+          minimum: 1
+          maximum: 10
+          example: 8
+        waktuTidur:
+          type: number
+          description: Total jam tidur
+          example: 7.5
+        screenTime:
+          type: number
+          example: 4
+        tingkatOlahraga:
+          type: string
+          enum: [Tidak Ada, Kadang-kadang, Rutin]
+          example: "Kadang-kadang"
+        interaksiSosial:
+          type: integer
+          minimum: 1
+          maximum: 10
+          example: 8
+        waktuKerja:
+          type: number
+          example: 8
+        checkinDate:
+          type: string
+          format: date
+          example: "2025-05-25"
+        createdAt:
+          type: string
+          format: date-time
+
+    HeatmapEntry:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+          example: "2025-05-25"
+        level:
+          type: integer
+          minimum: 1
+          maximum: 4
+          example: 3
+
+    # ─── Badge ─────────────────────────────────────────────────
+    Badge:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "Pemula Mindful"
+        description:
+          type: string
+          example: "Selesaikan check-in pertamamu!"
+        iconUrl:
+          type: string
+          nullable: true
+        criteria:
+          type: string
+          example: "Lakukan 1x daily check-in"
+        isUnlocked:
+          type: boolean
+          example: true
+        unlockedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+
+    # ─── Group ─────────────────────────────────────────────────
+    Group:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "Ruang Tenang"
+        description:
+          type: string
+          example: "Komunitas untuk berbagi tips menjaga ketenangan pikiran."
+        category:
+          type: string
+          example: "Mindfulness"
+        isPublic:
+          type: boolean
+          example: true
+        imageUrl:
+          type: string
+          nullable: true
+        memberCount:
+          type: integer
+          example: 42
+        createdAt:
+          type: string
+          format: date-time
+
+    GroupMember:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+          example: "Budi Santoso"
+        avatar:
+          type: string
+          nullable: true
+        role:
+          type: string
+          enum: [ADMIN, MEMBER]
+          example: "MEMBER"
+        joinedAt:
+          type: string
+          format: date-time
+
+  responses:
+    BadRequest:
+      description: Request tidak valid (validasi gagal)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+            example:
+              code: 400
+              message: '"skor_kebahagiaan" must be between 1 and 10'
+    Unauthorized:
+      description: Token tidak valid atau tidak disertakan
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            code: 401
+            message: "Please authenticate"
+    Forbidden:
+      description: Tidak punya akses (role tidak sesuai)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            code: 403
+            message: "Forbidden: You do not have the required role"
+    NotFound:
+      description: Resource tidak ditemukan
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            code: 404
+            message: "Not found"
+    Conflict:
+      description: Konflik data (duplikasi)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            code: 409
+            message: "You have already checked in today"
+
+# ================================================================
+# PATHS
+# ================================================================
+paths:
+  # ─── AUTH ──────────────────────────────────────────────────────
+  /auth/register:
+    post:
+      summary: Register user baru
+      description: Mendaftarkan user baru. Role default adalah USER.
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name:
+                  type: string
+                  example: "Budi Santoso"
+                email:
+                  type: string
+                  format: email
+                  example: "budi@example.com"
+                password:
+                  type: string
+                  minLength: 8
+                  example: "Password123"
+                age:
+                  type: integer
+                  example: 25
+                gender:
+                  type: string
+                  enum: [MALE, FEMALE]
+                  example: "MALE"
+      responses:
+        "201":
+          description: Registrasi berhasil
+          content:
+            application/json:
+              example:
+                success: true
+                message: "Registration successful"
+                data:
+                  user: { id: 3, name: "Budi Santoso", email: "budi@example.com", role: "USER" }
+                  tokens:
+                    {
+                      access: { token: "eyJ...", expires: "2025-05-26T..." },
+                      refresh: { token: "eyJ...", expires: "2025-06-25T..." },
+                    }
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /auth/login:
+    post:
+      summary: Login
+      description: Login dengan email & password. Kembalikan access + refresh token.
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "user@capstone.com"
+                password:
+                  type: string
+                  example: "user1234"
+      responses:
+        "200":
+          description: Login berhasil
+          content:
+            application/json:
+              example:
+                success: true
+                message: "Login success"
+                data:
+                  user: { id: 2, name: "Test User", email: "user@capstone.com", role: "USER" }
+                  tokens:
+                    {
+                      access: { token: "eyJ...", expires: "2025-05-26T..." },
+                      refresh: { token: "eyJ...", expires: "2025-06-25T..." },
+                    }
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/logout:
+    post:
+      summary: Logout
+      description: Invalidate refresh token.
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+                  example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      responses:
+        "204":
+          description: Logout berhasil (no content)
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /auth/refresh-tokens:
+    post:
+      summary: Refresh access token
+      description: Perbarui access token menggunakan refresh token yang masih valid.
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+                  example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      responses:
+        "200":
+          description: Token berhasil diperbarui
+          content:
+            application/json:
+              example:
+                success: true
+                message: "Tokens refreshed successfully"
+                data:
+                  tokens:
+                    {
+                      access: { token: "eyJ...", expires: "2025-05-26T..." },
+                      refresh: { token: "eyJ...", expires: "2025-06-25T..." },
+                    }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/me:
+    get:
+      summary: Get current user (auth endpoint lama)
+      tags: [Auth]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Data user yang login
+          content:
+            application/json:
+              example:
+                success: true
+                message: "Success"
+                data:
+                  user: { id: 2, name: "Test User", email: "user@capstone.com", role: "USER" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ─── USER PROFILE ──────────────────────────────────────────────
+  /users/me:
+    get:
+      summary: Ambil profil user yang login
+      tags: [User Profile]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Data profil user
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/User"
+              example:
+                success: true
+                message: "User profile retrieved successfully"
+                data:
+                  id: 2
+                  name: "Test User"
+                  email: "user@capstone.com"
+                  avatar: null
+                  role: "USER"
+                  isActive: true
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+    put:
+      summary: Update profil user (nama / avatar)
+      tags: [User Profile]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 2
+                  example: "Budi Santoso"
+      responses:
+        "200":
+          description: Profil berhasil diupdate
+          content:
+            application/json:
+              example:
+                success: true
+                message: "Profile updated successfully"
+                data:
+                  id: 2
+                  name: "Budi Santoso"
+                  email: "user@capstone.com"
+                  avatar: "https://example.com/avatar.png"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /users/avatar:
+    post:
+      summary: Upload avatar user (image file)
+      tags: [User Profile]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                avatar:
+                  type: string
+                  format: binary
+                  description: File gambar (jpg, png, webp, max 2MB)
+      responses:
+        "200":
+          description: Avatar berhasil diunggah
+          content:
+            application/json:
+              example:
+                success: true
+                message: "Avatar uploaded successfully"
+                data:
+                  id: 2
+                  name: "Budi Santoso"
+                  email: "user@capstone.com"
+                  avatar: "/uploads/avatars/avatar-123456789.png"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ─── DAILY CHECK-IN ────────────────────────────────────────────
+  /checkins/today:
+    get:
+      summary: Cek status check-in hari ini
+      description: Mengembalikan boolean apakah user sudah check-in hari ini beserta datanya jika ada.
+      tags: [Daily Check-in]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Status check-in hari ini
+          content:
+            application/json:
+              example:
+                success: true
+                message: "Today check-in status retrieved"
+                data:
+                  hasCheckedIn: true
+                  checkin:
+                    id: 1
+                    userId: 2
+                    skorKebahagiaan: 8
+                    waktuTidur: 7.0
+                    screenTime: 4.0
+                    tingkatOlahraga: "Kadang-kadang"
+                    interaksiSosial: 8
+                    waktuKerja: 8.0
+                    checkinDate: "2026-05-25"
+                    createdAt: "2026-05-25T08:25:52.450Z"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /checkins:
+    post:
+      summary: Simpan daily check-in
+      description: |
+        Menyimpan data check-in harian user. **Satu user hanya bisa check-in 1x per hari.**
+        Jika sudah check-in hari ini akan mengembalikan error 409.
+      tags: [Daily Check-in]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - skor_kebahagiaan
+                - waktu_tidur
+                - screen_time
+                - tingkat_olahraga
+                - interaksi_sosial
+                - waktu_kerja
+              properties:
+                skor_kebahagiaan:
+                  type: integer
+                  minimum: 1
+                  maximum: 10
+                  description: Skor kebahagiaan pikiran hari ini (1=sangat tidak baik, 10=sangat baik/luar biasa)
+                  example: 8
+                waktu_tidur:
+                  type: number
+                  minimum: 0
+                  maximum: 24
+                  description: Total jam tidur
+                  example: 7.5
+                screen_time:
+                  type: number
+                  minimum: 0
+                  maximum: 24
+                  description: Total jam penggunaan layar (screen time)
+                  example: 4
+                tingkat_olahraga:
+                  type: string
+                  enum: [Tidak Ada, Kadang-kadang, Rutin]
+                  example: "Kadang-kadang"
+                interaksi_sosial:
+                  type: integer
+                  minimum: 1
+                  maximum: 10
+                  description: Skor interaksi sosial hari ini (1=sangat minim, 10=sangat aktif)
+                  example: 8
+                waktu_kerja:
+                  type: number
+                  minimum: 0
+                  maximum: 24
+                  description: Total jam kerja
+                  example: 8
+      responses:
+        "201":
+          description: Check-in berhasil disimpan
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Checkin"
+              example:
+                success: true
+                message: "Check-in saved successfully"
+                data:
+                  id: 1
+                  userId: 2
+                  skorKebahagiaan: 8
+                  waktuTidur: 7.0
+                  screenTime: 4.0
+                  tingkatOlahraga: "Kadang-kadang"
+                  interaksiSosial: 8
+                  waktuKerja: 8.0
+                  checkinDate: "2025-05-25"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /checkins/history:
+    get:
+      summary: Histori check-in untuk heatmap bulanan
+      description: |
+        Mengambil data check-in berdasarkan bulan & tahun.
+        Output berupa array `{ date, level }` yang siap dirender sebagai **heatmap** kalender.
+        `level` dihitung dari `skorKebahagiaan` (1-10) yang dikonversi ke skala 1-4:
+        - 1: Skor 1-2
+        - 2: Skor 3-5
+        - 3: Skor 6-8
+        - 4: Skor 9-10
+      tags: [Daily Check-in]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: month
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 12
+          example: 6
+        - name: year
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 2000
+          example: 2026
+      responses:
+        "200":
+          description: Data histori heatmap
+          content:
+            application/json:
+              example:
+                success: true
+                message: "Check-in history retrieved successfully"
+                data:
+                  month: 6
+                  year: 2026
+                  history:
+                    - date: "2026-06-01"
+                      level: 3
+                    - date: "2026-06-02"
+                      level: 4
+                    - date: "2026-06-03"
+                      level: 4
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ─── DASHBOARD ─────────────────────────────────────────────────
+  /dashboard/summary:
+    get:
+      summary: Ringkasan dashboard
+      description: |
+        Mengembalikan:
+        - `stressRiskPercentage`: persentase risiko stres (0-100) dihitung dari rata-rata skor kebahagiaan 7 check-in terakhir.
+        - `hasCheckedInToday`: status check-in hari ini.
+        - `recentBadges`: 3 lencana yang paling baru di-unlock.
+      tags: [Dashboard & Insights]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Data ringkasan berhasil diambil
+          content:
+            application/json:
+              example:
+                success: true
+                message: "Dashboard summary retrieved successfully"
+                data:
+                  stressRiskPercentage: 25
+                  currentStreak: 5
+                  hasCheckedInToday: true
+                  recentBadges:
+                    - id: 1
+                      name: "Pemula Mindful"
+                      description: "Selesaikan check-in pertamamu!"
+                      iconUrl: null
+                      unlockedAt: "2025-05-25T05:00:00.000Z"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+
+  /dashboard/badges:
+    get:
+      summary: Semua lencana & status unlock
+      description: |
+        Mengambil seluruh lencana yang tersedia di sistem beserta status
+        apakah user ini sudah men-unlock masing-masing lencana atau belum.
+      tags: [Dashboard & Insights]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Daftar lencana dengan status
+          content:
+            application/json:
+              example:
+                success: true
+                message: "Badges retrieved successfully"
+                data:
+                  - id: 1
+                    name: "Pemula Mindful"
+                    description: "Selesaikan check-in pertamamu!"
+                    iconUrl: null
+                    criteria: "Lakukan 1x daily check-in"
+                    isUnlocked: true
+                    unlockedAt: "2025-05-25T05:00:00.000Z"
+                  - id: 2
+                    name: "Konsisten 7 Hari"
+                    description: "Check-in 7 hari berturut-turut."
+                    iconUrl: null
+                    criteria: "Streak check-in 7 hari berturut"
+                    isUnlocked: false
+                    unlockedAt: null
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ─── GROUPS ────────────────────────────────────────────────────
+  /groups:
+    post:
+      summary: Buat grup baru
+      description: |
+        Membuat grup baru (publik atau privat).
+        Pembuat grup otomatis menjadi **ADMIN**.
+        Jika grup privat, `invite_code` akan otomatis dibuat.
+      tags: [Group / Circle]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [name, description, category, is_public]
+              properties:
+                name:
+                  type: string
+                  example: "Mindful Mornings Jakarta"
+                description:
+                  type: string
+                  example: "Tempat berbagi ketenangan di pagi hari."
+                category:
+                  type: string
+                  example: "Mindfulness"
+                is_public:
+                  type: boolean
+                  example: true
+                rules:
+                  type: array
+                  items:
+                    type: string
+                  example: ["Jaga kerahasiaan cerita anggota.", "Gunakan bahasa yang mendukung."]
+                image:
+                  type: string
+                  format: binary
+                  description: File gambar grup (jpg, png, webp, max 5MB)
+      responses:
+        "201":
+          description: Grup berhasil dibuat
+          content:
+            application/json:
+              example:
+                success: true
+                message: "Group created successfully"
+                data:
+                  id: 4
+                  name: "Mindful Mornings Jakarta"
+                  description: "Tempat berbagi ketenangan di pagi hari."
+                  category: "Mindfulness"
+                  isPublic: true
+                  imageUrl: "https://example.com/group-image.png"
+                  inviteCode: null
+                  memberCount: 1
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+    get:
+      summary: List grup publik
+      description: Mengambil daftar grup publik. Mendukung filter `search` dan `category`.
+      tags: [Group / Circle]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: search
+          in: query
+          required: false
+          description: Cari berdasarkan nama atau deskripsi grup
+          schema:
+            type: string
+          example: "tenang"
+        - name: category
+          in: query
+          required: false
+          description: Filter berdasarkan kategori (Mindfulness, Sleep, Anxiety, dll.)
+          schema:
+            type: string
+          example: "Mindfulness"
+      responses:
+        "200":
+          description: Daftar grup publik
+          content:
+            application/json:
+              example:
+                success: true
+                message: "Groups retrieved successfully"
+                data:
+                  - id: 1
+                    name: "Ruang Tenang"
+                    description: "Komunitas untuk berbagi tips menjaga ketenangan pikiran."
+                    category: "Mindfulness"
+                    isPublic: true
+                    imageUrl: null
+                    memberCount: 5
+                  - id: 2
+                    name: "Tidur Nyenyak"
+                    category: "Sleep"
+                    isPublic: true
+                    memberCount: 3
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /groups/joined:
+    get:
+      summary: List grup yang diikuti oleh user saat ini
+      description: Mengambil daftar grup di mana user aktif sebagai anggota.
+      tags: [Group / Circle]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Daftar grup yang diikuti
+          content:
+            application/json:
+              example:
+                success: true
+                message: "Joined groups retrieved successfully"
+                data:
+                  - id: 1
+                    name: "Ruang Tenang"
+                    category: "Mindfulness"
+                    memberCount: 5
+                    role: "ADMIN"
+                    joinedAt: "2025-05-25T05:00:00.000Z"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /groups/join-by-code:
+    post:
+      summary: Bergabung ke grup privat via kode undangan
+      description: |
+        Cocokkan `invite_code` dengan grup yang ada. Jika valid, user langsung
+        bergabung ke grup tersebut (termasuk grup privat).
+
+        **Kode contoh:** `HEAL-2025`
+      tags: [Group / Circle]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [invite_code]
+              properties:
+                invite_code:
+                  type: string
+                  example: "HEAL-2025"
+      responses:
+        "201":
+          description: Berhasil bergabung ke grup
+          content:
+            application/json:
+              example:
+                success: true
+                message: "Successfully joined the group via invite code"
+                data:
+                  id: 5
+                  userId: 2
+                  groupId: 3
+                  role: "MEMBER"
+                  joinedAt: "2025-05-25T08:00:00.000Z"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: Kode undangan tidak valid
+          content:
+            application/json:
+              example:
+                code: 404
+                message: "Invalid invite code. Group not found."
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /groups/{id}:
+    patch:
+      summary: Update detail grup
+      description: |
+        Mengupdate informasi grup. Hanya bisa dilakukan oleh **ADMIN** grup.
+        
+        **Logika Invite Code Otomatis:**
+        - Jika grup diubah dari **Privat ke Publik**: `inviteCode` akan dihapus (`null`).
+        - Jika grup diubah dari **Publik ke Privat**: `inviteCode` akan otomatis dibuat (jika belum ada).
+      tags: [Group / Circle]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 1
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                category:
+                  type: string
+                is_public:
+                  type: boolean
+                rules:
+                  type: array
+                  items:
+                    type: string
+                image:
+                  type: string
+                  format: binary
+                  description: File gambar grup (jpg, png, webp, max 5MB)
+      responses:
+        "200":
+          description: Grup berhasil diupdate
+          content:
+            application/json:
+              example:
+                success: true
+                message: "Group updated successfully"
+                data:
+                  id: 1
+                  name: "Nama Grup Baru"
+                  isPublic: false
+                  inviteCode: "MB-A1B2C3D4"
+        "403":
+          description: Bukan admin grup
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    get:
+      summary: Detail grup beserta anggota
+      description: Mengambil informasi lengkap satu grup dan seluruh daftar anggotanya.
+      tags: [Group / Circle]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 1
+      responses:
+        "200":
+          description: Detail grup berhasil diambil
+          content:
+            application/json:
+              example:
+                success: true
+                message: "Group detail retrieved successfully"
+                data:
+                  id: 1
+                  name: "Ruang Tenang"
+                  description: "Komunitas untuk berbagi tips menjaga ketenangan pikiran."
+                  category: "Mindfulness"
+                  isPublic: true
+                  imageUrl: null
+                  memberCount: 2
+                  members:
+                    - id: 1
+                      name: "Administrator"
+                      avatar: null
+                      role: "MEMBER"
+                      joinedAt: "2025-05-25T05:00:00.000Z"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /groups/{id}/join:
+    post:
+      summary: Bergabung ke grup publik
+      description: User bergabung ke grup publik. Tidak bisa digunakan untuk grup privat.
+      tags: [Group / Circle]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 1
+      responses:
+        "201":
+          description: Berhasil bergabung
+          content:
+            application/json:
+              example:
+                success: true
+                message: "Successfully joined the group"
+                data:
+                  id: 4
+                  userId: 2
+                  groupId: 1
+                  role: "MEMBER"
+                  joinedAt: "2025-05-25T08:05:00.000Z"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Grup ini privat, gunakan invite code
+          content:
+            application/json:
+              example:
+                code: 403
+                message: "This group is private. Use an invite code to join."
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /groups/{id}/report:
+    get:
+      summary: Laporan partisipasi dan mood grup hari ini
+      description: |
+        Menghasilkan data partisipasi (berdasarkan check-in hari ini)
+        dan mood grup (berdasarkan rata-rata skor kebahagiaan).
+        
+        **Klasifikasi Mood:**
+        - **Cerah & Hangat**: Rata-rata skor >= 9
+        - **Tenang & Stabil**: Rata-rata skor >= 6
+        - **Mendung & Teduh**: Rata-rata skor >= 3
+        - **Hujan yang Menenangkan**: Rata-rata skor < 3
+      tags: [Group / Circle]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 1
+      responses:
+        "200":
+          description: Laporan berhasil dibuat
+          content:
+            application/json:
+              example:
+                success: true
+                message: "Group report retrieved successfully"
+                data:
+                  participation:
+                    percentage: 80
+                    checkedInCount: 4
+                    totalMembers: 5
+                    message: "Hampir lengkap! Ayo dukung teman yang belum check-in."
+                  mood:
+                    type: "Cerah & Hangat"
+                    happyPercentage: 74
+                    description: "Sebagian besar anggota grup merasa cukup berenergi hari ini!"
+                    icon: "sun"
+                    averageHappiness: 8.5
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /groups/{id}/members/{userId}:
+    delete:
+      summary: Kick anggota atau keluar dari grup
+      description: |
+        - Jika `userId` di path adalah user itu sendiri: **Keluar dari grup**.
+        - Jika `userId` di path adalah orang lain: **Kick anggota** (Harus ADMIN).
+      tags: [Group / Circle]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID Grup
+          schema:
+            type: integer
+        - name: userId
+          in: path
+          required: true
+          description: ID User yang akan dikeluarkan
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Berhasil keluar atau kick
+          content:
+            application/json:
+              example:
+                success: true
+                message: "Successfully left the group"
+        "403":
+          description: Bukan admin atau tidak punya wewenang
+        "404":
+          $ref: "#/components/responses/NotFound"

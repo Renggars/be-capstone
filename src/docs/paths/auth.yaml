@@ -1,0 +1,189 @@
+paths:
+  /v1/auth/register:
+    post:
+      summary: Register user baru
+      description: Mendaftarkan user baru dengan email dan password. Role default adalah USER.
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - email
+                - password
+              properties:
+                name:
+                  type: string
+                  example: "John Doe"
+                  minLength: 2
+                  maxLength: 100
+                email:
+                  type: string
+                  format: email
+                  example: "john@example.com"
+                password:
+                  type: string
+                  minLength: 8
+                  example: "Password123"
+                role:
+                  type: string
+                  enum: [USER, ADMIN]
+                  example: "USER"
+      responses:
+        "201":
+          description: Registrasi berhasil
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Registration successful"
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        $ref: "#/components/schemas/User"
+                      tokens:
+                        $ref: "#/components/schemas/AuthTokens"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /v1/auth/login:
+    post:
+      summary: Login user
+      description: Login menggunakan email dan password. Mengembalikan access token dan refresh token.
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "admin@capstone.com"
+                password:
+                  type: string
+                  example: "admin123"
+      responses:
+        "200":
+          description: Login berhasil
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Login success"
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        $ref: "#/components/schemas/User"
+                      tokens:
+                        $ref: "#/components/schemas/AuthTokens"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /v1/auth/logout:
+    post:
+      summary: Logout user
+      description: Menghapus refresh token dari database (invalidate session).
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refreshToken
+              properties:
+                refreshToken:
+                  type: string
+                  example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      responses:
+        "204":
+          description: Logout berhasil (no content)
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/auth/refresh-tokens:
+    post:
+      summary: Refresh access token
+      description: Memperbarui access token menggunakan refresh token yang masih valid.
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refreshToken
+              properties:
+                refreshToken:
+                  type: string
+                  example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      responses:
+        "200":
+          description: Tokens berhasil diperbarui
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Tokens refreshed successfully"
+                  data:
+                    type: object
+                    properties:
+                      tokens:
+                        $ref: "#/components/schemas/AuthTokens"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /v1/auth/me:
+    get:
+      summary: Get current user
+      description: Mendapatkan data user yang sedang login. Membutuhkan Bearer token.
+      tags:
+        - Auth
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Data user berhasil diambil
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Success"
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
