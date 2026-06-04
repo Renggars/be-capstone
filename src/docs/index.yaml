@@ -26,8 +26,8 @@ info:
     name: MindBalance Team
 
 servers:
-  - url: http://localhost:4000
-    description: Local Development Server
+  - url: /
+    description: Current Server
 
 tags:
   - name: Auth
@@ -212,7 +212,6 @@ components:
           type: string
           format: date-time
           nullable: true
-
 
     # ─── Group ─────────────────────────────────────────────────
     Group:
@@ -785,7 +784,6 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
-
   /dashboard/badges:
     get:
       summary: Semua lencana & status unlock
@@ -1008,7 +1006,7 @@ paths:
       summary: Update detail grup
       description: |
         Mengupdate informasi grup. Hanya bisa dilakukan oleh **ADMIN** grup.
-        
+
         **Logika Invite Code Otomatis:**
         - Jika grup diubah dari **Privat ke Publik**: `inviteCode` akan dihapus (`null`).
         - Jika grup diubah dari **Publik ke Privat**: `inviteCode` akan otomatis dibuat (jika belum ada).
@@ -1151,7 +1149,7 @@ paths:
       description: |
         Menghasilkan data partisipasi (berdasarkan check-in hari ini)
         dan mood grup (berdasarkan rata-rata skor kebahagiaan).
-        
+
         **Klasifikasi Mood:**
         - **Cerah & Hangat**: Rata-rata skor >= 9
         - **Tenang & Stabil**: Rata-rata skor >= 6
