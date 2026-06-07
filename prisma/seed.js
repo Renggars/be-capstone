@@ -42,37 +42,37 @@ async function main() {
     {
       name: "Pemula Mindful",
       description: "Selesaikan check-in pertamamu!",
-      iconUrl: null,
+      iconUrl: "https://i.ibb.co.com/4gStDQwb/Frame-18.png",
       criteria: "Lakukan 1x daily check-in",
     },
     {
       name: "Konsisten 7 Hari",
       description: "Check-in 7 hari berturut-turut.",
-      iconUrl: null,
+      iconUrl: "https://i.ibb.co.com/ynt8Tch2/Frame-19.png",
       criteria: "Streak check-in 7 hari berturut",
     },
     {
       name: "Tidur Sehat",
       description: "Catat tidur ≥ 7 jam selama 5 hari.",
-      iconUrl: null,
+      iconUrl: "https://i.ibb.co.com/VY8gg21W/Frame-20.png",
       criteria: "waktu_tidur >= 7 dalam 5 checkins terakhir",
     },
     {
       name: "Aktif Bergerak",
       description: "Pilih tingkat olahraga Rutin selama 3 hari.",
-      iconUrl: null,
+      iconUrl: "https://i.ibb.co.com/hFNNhzK2/Frame-21.png",
       criteria: "tingkat_olahraga = Rutin dalam 3 checkins berturut",
     },
     {
       name: "Jiwa Sosial",
       description: "Raih skor interaksi sosial 10 sebanyak 3 kali.",
-      iconUrl: null,
+      iconUrl: "https://i.ibb.co.com/prybgHYB/Frame-22.png",
       criteria: "interaksi_sosial = 10 dalam 3 checkins",
     },
     {
       name: "Penjelajah Grup",
       description: "Bergabung ke grup pertamamu.",
-      iconUrl: null,
+      iconUrl: "https://i.ibb.co.com/zTd1qxmd/Frame-23.png",
       criteria: "Bergabung ke minimal 1 grup",
     },
   ];
@@ -80,7 +80,7 @@ async function main() {
   for (const badge of badges) {
     await prisma.badge.upsert({
       where: { name: badge.name },
-      update: {},
+      update: { iconUrl: badge.iconUrl },
       create: badge,
     });
   }

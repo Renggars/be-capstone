@@ -70,11 +70,8 @@ const getGroupById = async (groupId) => {
     throw new ApiError(httpStatus.NOT_FOUND, "Group not found");
   }
 
-  // Hapus inviteCode dari response publik
-  const { inviteCode, ...groupData } = group;
-
   return {
-    ...groupData,
+    ...group,
     memberCount: group.members.length,
     members: group.members.map((m) => ({
       ...m.user,
